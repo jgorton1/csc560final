@@ -1,0 +1,101 @@
+import pyarrow.parquet as pq
+import pandas as pd
+import numpy as np
+import os
+# a data structure to store statistics of a partition
+class Partition:
+    def __init__(self, parts, column_set, output_set, data):
+        # parts is a list of values that define the partition - e.g. ["R", [0,100]]
+        # column_set is a list of column names
+        # data is a pyarrow table
+        self.parts = parts
+        self.column_set = column_set
+        data = data.select(column_set + output_set)
+        for i, part in enumerate(parts):
+            if type(part) == str:  # Fix: Replace "string" with "str"
+                data = data.filter(column_set[i] == part)
+            elif type(part) == list:
+                data = data.filter(column_set[i] >= part[0] and column_set[i] < part[1])
+        # get indexes of union of column_set and output_set
+        self.data = data.to_pandas()
+    def sample(self, sample_size):
+        # sample the data
+        return self.data.sample(sample_size)
+    def name(self):
+        # return a string that represents the partition
+        return "_".join([str(part) for part in self.parts])
+
+def enumerate_partitions(columns):
+    # columns is a list of lists of values
+    # return a list of all possible partitions
+    if len(columns) == 1:
+        return columns[0]
+    else:
+        partitions = []
+        for part in columns[0]:
+            for partition in enumerate_partitions(columns[1:]):
+                partitions.append([part] + partition)
+        return partitions
+
+
+def sample_gen(column_set, output_set, table, sample_size=1000, partition_size=2):
+    # column_set is a set of column names
+    # table is name of parquet file to be read
+    # read table
+    print("here")
+    table = pq.read_table(table)
+    print(type(table))
+    # find the different values in each column
+    columns = [[] for i in range(len(column_set))]
+    for i, column in enumerate(column_set):
+        print(column)
+        unique_values = table[column].unique()
+        if len(unique_values) > 100:
+            # divide range into 100 partitions
+            # add the range of each partition to the list
+            
+            # convert ChunkedArray to pandas DataFrame
+            column_data = table[column].to_pandas()
+            
+            # get range of values
+            min_val = column_data.min()
+            max_val = column_data.max()
+            partition_range = (max_val - min_val) / partition_size
+            columns[i] = [[min_val + partition_range * i, min_val + partition_range * (i +1)] for i in range(partition_size)]
+        else:
+            columns[i] = unique_values
+        print(table[column].unique())
+    # generate statistics for each partition
+    # iterate over each partition
+    # enumerate all possible partitions given columns
+    partitions = enumerate_partitions(columns)
+    print(partitions)
+
+    # for each partition, generate a sample and save it
+    for partition in partitions:
+        part = Partition(partition, column_set, output_set, table)
+        sample = part.sample(sample_size)
+        sample.to_parquet("samples/" + part.name() + ".parquet")
+        # store this in a logfile so we don't recreate samples unnecessarily
+        with open("logfile.txt", "a") as logfile:
+            logfile.write(part.name() + "\n")
+   
+
+    # for each column, generate a sample of size sample_size (to start - later to be informed by variance etc.)
+
+    # if over 100 unique values, generate a variance optimal sample with 100 partitions
+
+
+
+    # generate sample for each partition
+
+    # save the sample in the samples folder
+
+
+def main():
+    table = 'db_parq/lineitem.parquet'
+    column_set = ["l_returnflag", "l_extendedprice"]
+    output_set = ["l_tax"]
+    sample_gen(column_set, output_set, table)
+if __name__ == "__main__":
+    main()

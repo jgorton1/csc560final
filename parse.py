@@ -6,9 +6,9 @@ so that we can make a sample using them
 '''
 
 import sqlparse
-from sqlparse.sql import Identifier, IdentifierList
+from sqlparse.sql import Identifier, IdentifierList, Where, Comparison
 
-def parse(query):
+def get_output_columns(query):
     parsed = sqlparse.parse(query)
     columns = []
 
@@ -39,4 +39,26 @@ def parse(query):
                 for identifier in token.get_identifiers():
                     columns.append(identifier.get_real_name())
 
-    return columns
+    return columns    
+
+def get_where_columns(query):
+    ''' Get columns from WHERE clause of a query'''
+    parsed = sqlparse.parse(query)
+    where_clause = None
+
+    # Find WHERE clause
+    for statement in parsed:
+        for item in statement.tokens:
+            if isinstance(item, Where):
+                where_clause = item
+                break
+
+    # Extract columns from WHERE clause
+    if where_clause:
+        columns = []
+        for token in where_clause.tokens:
+            if isinstance(token, Comparison):
+                columns.append(str(token.left))
+        return columns
+
+    return []
