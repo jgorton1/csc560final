@@ -62,3 +62,15 @@ def get_where_columns(query):
         return columns
 
     return []
+
+def get_where_predicates(query):
+    ''' Get predicates on each column from WHERE clause of a query'''
+    parsed = sqlparse.parse(query)
+    where_clause = None
+    # Find WHERE clause
+    for statement in parsed:
+        for item in statement.tokens:
+            if isinstance(item, Where):
+                where_clause = item
+                break
+    # Extract predicates from WHERE clause
