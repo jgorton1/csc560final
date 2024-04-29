@@ -11,5 +11,5 @@ def approx_query(query):
 
 
 def main():
-    query = "SELECT SUM(l_tax) FROM lineitem WHERE RETURNFLAG = 'R' and l_extendedprice < 1000"
+    query = "SELECT SUM(l_tax) FROM lineitem WHERE l_returnflag= 'R' and l_extendedprice < 1000"
     print(approx_query(query))

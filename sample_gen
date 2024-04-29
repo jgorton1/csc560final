@@ -10,40 +10,65 @@ class Partition:
         # data is a pyarrow table
         self.parts = parts
         self.column_set = column_set
-        data = data.select(column_set + output_set)
+        self.output_set = output_set
+        if data.shape[1] != len(column_set) + len(output_set):
+            raise ValueError("Data does not have the correct number of columns")
+            #data = data.select(column_set + output_set)
+        print(parts)
         for i, part in enumerate(parts):
+            print(type(part),part)
             if type(part) == str:  # Fix: Replace "string" with "str"
-                data = data.filter(column_set[i] == part)
+                print("filter on str")
+                data = data[data[column_set[i]] == part]
             elif type(part) == list:
-                data = data.filter(column_set[i] >= part[0] and column_set[i] < part[1])
+                data = data[(data[column_set[i]] >= part[0])][(data[column_set[i]] < part[1])]
         # get indexes of union of column_set and output_set
-        self.data = data.to_pandas()
-    def sample(self, sample_size):
+        self.data = data
+    def sample(self, error_rate):
+        print("yuh")
+        # error_rate is the maximum error rate as a percentage of the sample mean of the output_set
+        print(self.output_set[0])
+        data = self.data[self.output_set[0]].astype(float)
+        print(data.head())
+        error = error_rate * data.mean()
+        # for simplicity, 95% confidence interval
+        S = data.std()
+        print(S)
+        N = data.shape[0]
+        n_0 = 1.96**2 * S**2 / error**2
+        n = n_0 / (1 + n_0 / N)
+        sample_size =  min(int(n), N)
+        print(sample_size)
         # sample the data
         return self.data.sample(sample_size)
     def name(self):
         # return a string that represents the partition
         return "_".join([str(part) for part in self.parts])
 
-def enumerate_partitions(columns):
+def enumerate_partitions(columns, n):
     # columns is a list of lists of values
+    # eg columns = [["A", "B"],[[1,2],[2,3]]]
     # return a list of all possible partitions
-    if len(columns) == 1:
-        return columns[0]
+    # eg [["A", [1,2]], ["A", [2,3]], ["B", [1,2]], ["B", [2,3]]
+    if n == 1:
+        return [[part] for part in columns[0]]
     else:
         partitions = []
         for part in columns[0]:
-            for partition in enumerate_partitions(columns[1:]):
+            for partition in enumerate_partitions(columns[1:], n-1):
                 partitions.append([part] + partition)
         return partitions
 
 
-def sample_gen(column_set, output_set, table, sample_size=1000, partition_size=2):
+def sample_gen(column_set, output_set, table, error_rate=0.03, partition_size=10):
     # column_set is a set of column names
     # table is name of parquet file to be read
+    # error_rate is the maximum error rate as a percentage of the sample mean (sum and average will be accurate - count will be approximate)
     # read table
+    # sample_size=1000
     print("here")
     table = pq.read_table(table)
+    table = table.select(column_set + output_set).to_pandas()
     print(type(table))
     # find the different values in each column
     columns = [[] for i in range(len(column_set))]
@@ -55,7 +80,7 @@ def sample_gen(column_set, output_set, table, sample_size=1000, partition_size=2
             # add the range of each partition to the list
             
             # convert ChunkedArray to pandas DataFrame
-            column_data = table[column].to_pandas()
+            column_data = table[column]
             
             # get range of values
             min_val = column_data.min()
@@ -68,13 +93,17 @@ def sample_gen(column_set, output_set, table, sample_size=1000, partition_size=2
     # generate statistics for each partition
     # iterate over each partition
     # enumerate all possible partitions given columns
-    partitions = enumerate_partitions(columns)
+    print(columns)
+    partitions = enumerate_partitions(columns, len(columns))
     print(partitions)
 
     # for each partition, generate a sample and save it
+    
+    print(table.head())
+    
     for partition in partitions:
         part = Partition(partition, column_set, output_set, table)
-        sample = part.sample(sample_size)
+        sample = part.sample(error_rate)
         sample.to_parquet("samples/" + part.name() + ".parquet")
         # store this in a logfile so we don't recreate samples unnecessarily
         with open("logfile.txt", "a") as logfile:
