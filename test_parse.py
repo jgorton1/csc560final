@@ -1,5 +1,5 @@
 import unittest
-from parse import get_output_columns, get_where_columns
+from parse import get_output_columns, get_where_columns, get_where_predicates, add_count_star
 
 class TestParse(unittest.TestCase):
     def test_parse_empty_query(self):
@@ -45,6 +45,27 @@ class TestParse(unittest.TestCase):
         query = 'SELECT u.name, a.address FROM users u JOIN addresses a ON u.id = a.user_id WHERE u.age > 18 AND a.city = "New York"'
         expected_columns = ['u.age', 'a.city']
         self.assertEqual(get_where_columns(query), expected_columns)
+    def test_example_query(self):
+        query = "SELECT AVG(l_tax) FROM lineitem WHERE l_returnflag = 'A' and l_extendedprice < 20000 and l_extendedprice > 10000"
+        expected_output_columns = ['l_tax']
+        expected_where_columns = ['l_returnflag', 'l_extendedprice']
+        self.assertEqual(get_output_columns(query), expected_output_columns)
+        self.assertEqual(get_where_columns(query), expected_where_columns)
+        print(get_where_predicates(query))
+    def test_add_count_star_no_count_star(self):
+        query = 'SELECT name, age FROM users'
+        expected_query = 'SELECT name, age , COUNT(*) FROM users'
+        self.assertEqual(add_count_star(query), expected_query)
+
+    def test_add_count_star_with_count_star(self):
+        query = 'SELECT COUNT(*) FROM users'
+        expected_query = 'SELECT COUNT(*) FROM users'
+        self.assertEqual(add_count_star(query), expected_query)
+
+    def test_add_count_star_multiple_select_statements(self):
+        query = 'SELECT name FROM users'
+        expected_query = 'SELECT name , COUNT(*) FROM users'
+        self.assertEqual(add_count_star(query), expected_query)
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,5 +1,4 @@
 import sqlparse
-'''
 query = "SELECT SUM(l_tax) FROM lineitem WHERE RETURNFLAG = 'R' and l_extendedprice < 1000"
 print(sqlparse.parse(query)[0].tokens)
 # print where clause tokens
@@ -16,10 +15,5 @@ if where_clause:
     for token in where_clause.tokens:
         if isinstance(token, sqlparse.sql.Comparison):
             print(token)
-            '''
-x = [1,2]
-y = [3,4]
-print(x+y)
-x.append(y)
-x.append(5)
-print(x)
+
+
