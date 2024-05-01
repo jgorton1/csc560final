@@ -12,16 +12,14 @@ class Partition:
         self.parts = parts
         self.column_set = column_set
         self.output_set = output_set
-        if population_count != 0:
-            self.population_count = population_count
-        else:
-            self.population_count = data.shape[0]
         self.sample_count = sample_count
         if shell:
             self.data = data
+            self.population_count = population_count
             return
-        if data.shape[1] != len(column_set) + len(output_set):
-            raise ValueError("Data does not have the correct number of columns")
+        # include all columns in the table
+        #if data.shape[1] != len(column_set) + len(output_set):
+        #    raise ValueError("Data does not have the correct number of columns")
             #data = data.select(column_set + output_set)
         print(parts)
         for i, part in enumerate(parts):
@@ -31,6 +29,8 @@ class Partition:
                 data = data[data[column_set[i]] == part]
             elif type(part) == list:
                 data = data[(data[column_set[i]] >= part[0])][(data[column_set[i]] < part[1])]
+        
+        self.population_count = data.shape[0]
         # get indexes of union of column_set and output_set
         self.data = data
     def sample(self, error_rate):
@@ -62,7 +62,7 @@ class PartitionCollection:
     
     def add_partition(self, partition):
         # make a copy and remove the data so we don't store it in the pickle file
-        partition = Partition(partition.parts, partition.column_set, partition.output_set, pd.DataFrame(), population_count=partition.population_count, sample_count=partition.sample_count, shell=True)
+        partition = Partition(partition.parts, partition.column_set, partition.output_set, pd.DataFrame(), partition.population_count, partition.sample_count, shell=True)
         self.partitions.append(partition)
     
     def serialize(self, file_path):

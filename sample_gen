@@ -29,7 +29,8 @@ def sample_gen(column_set, output_set, table, error_rate=0.03, partition_size=10
     # sample_size=1000
     print("here")
     table = pq.read_table(table)
-    table = table.select(column_set + output_set).to_pandas()
+    #table = table.select(column_set + output_set).to_pandas()
+    table = table.to_pandas() # include all columns for now
     print(type(table))
     # find the different values in each column
     # columns is a list of lists of values on which to partition

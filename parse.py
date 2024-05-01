@@ -126,8 +126,43 @@ def get_where_predicates(query):
                     raise ValueError("Predicate value not a string or number")
     return where_predicates
 
+def add_operation(query, operation):
+    # add the specified operation to the query
+    parsed = sqlparse.parse(query)
+    for stmt in parsed:
+        # Check if the statement is a SELECT statement
+        if stmt.get_type() != 'SELECT':
+            continue
+
+        # Find the SELECT clause
+        select_clause = next((token for token in stmt.tokens if token.ttype is sqlparse.tokens.Keyword.DML and token.value.upper() == 'SELECT'), None)
+        if select_clause is None:
+            continue
+
+        # Find the FROM clause
+        from_clause = next((token for token in stmt.tokens if token.ttype is sqlparse.tokens.Keyword and token.value.upper() == 'FROM'), None)
+
+        # Get the tokens between SELECT and FROM
+        if from_clause is not None:
+            tokens_between = stmt.tokens[stmt.token_index(select_clause)+1:stmt.token_index(from_clause)]
+        else:
+            tokens_between = stmt.tokens[stmt.token_index(select_clause)+1:]
+
+        # Check if the operation already exists
+        if any(token.value.upper() == operation.upper() for token in tokens_between):
+            return query
+
+        # Add the operation
+        operation_token = sqlparse.sql.Token(None, f', {operation} ')
+        stmt.tokens.insert(stmt.token_index(from_clause), operation_token)
+        return str(stmt)
 def add_count_star(query):
-    # add count(*) to the query
+    return add_operation(query, 'COUNT(*)')
+def add_var_samp(query, column_name):
+    return add_operation(query, f'VAR_SAMP({column_name})')
+
+def get_aggregate_operation(query):
+    # assuming only one aggregate operation
     parsed = sqlparse.parse(query)
     for stmt in parsed:
         # Check if the statement is a SELECT statement
@@ -149,13 +184,10 @@ def add_count_star(query):
             tokens_between = stmt.tokens[stmt.token_index(select_clause)+1:]
 
         # Check if there is a COUNT(*) already
-        if any(token.value.upper() == 'COUNT(*)' for token in tokens_between):
-            return query
-
-        # Add COUNT(*)
-        count_token = sqlparse.sql.Token(None, ', COUNT(*) ')
-        stmt.tokens.insert(stmt.token_index(from_clause), count_token)
-        return str(stmt)
+        for token in tokens_between:
+            if isinstance(token, sqlparse.sql.Function):
+                return token.get_real_name()
+        return None
 
 
 
