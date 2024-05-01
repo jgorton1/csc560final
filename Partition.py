@@ -5,13 +5,18 @@ import numpy as np
 import os
 import pickle
 class Partition:
-    def __init__(self, parts, column_set, output_set, data, shell=False):
+    def __init__(self, parts, column_set, output_set, data, population_count=0, sample_count=0, shell=False):
         # parts is a list of values that define the partition - e.g. ["R", [0,100]]
         # column_set is a list of column names
         # data is a pyarrow table
         self.parts = parts
         self.column_set = column_set
         self.output_set = output_set
+        if population_count != 0:
+            self.population_count = population_count
+        else:
+            self.population_count = data.shape[0]
+        self.sample_count = sample_count
         if shell:
             self.data = data
             return
@@ -42,6 +47,7 @@ class Partition:
         n = n_0 / (1 + n_0 / N)
         sample_size =  min(int(n), N)
         print(sample_size)
+        self.sample_count = sample_size
         # sample the data
         return self.data.sample(sample_size)
     def name(self):
@@ -56,7 +62,7 @@ class PartitionCollection:
     
     def add_partition(self, partition):
         # make a copy and remove the data so we don't store it in the pickle file
-        partition = Partition(partition.parts, partition.column_set, partition.output_set, pd.DataFrame(), shell=True)
+        partition = Partition(partition.parts, partition.column_set, partition.output_set, pd.DataFrame(), population_count=partition.population_count, sample_count=partition.sample_count, shell=True)
         self.partitions.append(partition)
     
     def serialize(self, file_path):

@@ -49,14 +49,15 @@ def sample_gen(column_set, output_set, table, error_rate=0.03, partition_size=10
     for partition in partition_lists:
         # TODO this is slow because we filter the entire table for each partition
         part = Partition(partition, column_set, output_set, table)
-        part_coll.add_partition(part)
+        
         sample = part.sample(error_rate)
+        part_coll.add_partition(part)
         # add metadata to the sample
-        new_metadata = {'row_count': str(part.row_count).encode('utf-8')}
+        #new_metadata = {'pop_count': str(part.row_count).encode('utf-8'), 'sample_count': str(sample.shape[0]).encode('utf-8')}
         sample_pq = pa.Table.from_pandas(sample, preserve_index=False)
-        existing_metadata = sample_pq.schema.metadata
-        updated_metadata = {**existing_metadata, **new_metadata} if existing_metadata else new_metadata
-        sample_pq = sample_pq.replace_schema_metadata(updated_metadata)
+        # existing_metadata = sample_pq.schema.metadata
+        # updated_metadata = {**existing_metadata, **new_metadata} if existing_metadata else new_metadata
+        #sample_pq = sample_pq.replace_schema_metadata(updated_metadata)
         with pa.OSFile("samples/" + part.name() + ".parquet", 'wb') as sink:
             with pa.parquet.ParquetWriter(sink, sample_pq.schema, compression='snappy', flavor='spark') as writer:
                 writer.write_table(sample_pq)

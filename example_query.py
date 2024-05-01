@@ -34,10 +34,12 @@ def fast_query():
     where_predicates = parse.get_where_predicates(query)
     query = parse.add_count_star(query)
 
-    names = sf.sample_finder("partitions.pkl", where_cols, output_cols, where_predicates)
+    names, metadatas = sf.sample_finder("partitions.pkl", where_cols, output_cols, where_predicates)
     results = [None for i in range(len(names))]
     for i, name in enumerate(names):
         lineitem = ds.dataset('samples/' + name + '.parquet', format='parquet')
+        #lineitem = ds.('samples/' + name + '.parquet')
+        print(metadatas[i])
         results[i] = con.execute(query).arrow()
         print(results[i])
 

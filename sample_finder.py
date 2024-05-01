@@ -14,9 +14,9 @@ def sample_finder(filename, where_cols, output_cols, where_predicates):
     where_dict = dict(zip(where_cols, where_predicates))
     print(where_dict)
     sample_file_names = []
+    metadatas = []
     for part in part_collection.partitions:
         if set_equal(part.column_set, where_cols) and set_equal(part.output_set, output_cols):
-            # check if the partition satisfies the where predicate
             for i, val in enumerate(part.parts):
                 if type(val) == str:
                     if val != where_dict[part.column_set[i]]:
@@ -27,8 +27,9 @@ def sample_finder(filename, where_cols, output_cols, where_predicates):
             else:
                 # if the loop completes without breaking, then the partition satisfies the where predicate
                 sample_file_names.append(part.name())
+                metadatas.append([part.population_count, part.sample_count])
 
-    return sample_file_names # array of sample file names that can be used for the query
+    return sample_file_names, metadatas # array of sample file names that can be used for the query
 
 def set_equal(list1, list2):
     return set(list1) == set(list2)
