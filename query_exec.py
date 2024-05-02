@@ -5,6 +5,7 @@ import parse
 import sample_finder as sf
 import pyarrow.dataset as ds
 import duckdb as db
+import pandasql as ps
 
 def approx_query(query):
     # find the correct sample
@@ -81,9 +82,11 @@ def approx_query(query):
         total_count = 0
         for i, result in enumerate(results):
             strat_pop, strat_sample = metadatas[i]
+            print(strat_pop, strat_sample)
             weight = float(strat_pop) / strat_sample
             count = int(result[f"count_star()"][0].as_py())
             weighted_count += count * weight
+            print(count, weight, weighted_count)
             total_count += strat_pop
             # calculate the variance
             proportion = count / strat_sample
@@ -107,7 +110,9 @@ def exact_query(query):
     print(result)
 
 def main():
-    query = "SELECT AVG(l_tax) FROM lineitem WHERE l_returnflag= 'R' and l_extendedprice < 100000"
+    query = "SELECT COUNT(l_tax) FROM lineitem WHERE l_returnflag= 'A' and l_extendedprice < 20000 and l_extendedprice > 10000"# and l_extendedprice > 10000"
+    #query = "SELECT AVG(l_extendedprice) FROM lineitem WHERE l_returnflag = 'R' and l_shipmode = 'MAIL'"
+    exact_query(query)
     start_time = time.time()
     print(approx_query(query))
     end_time = time.time()
@@ -116,6 +121,11 @@ def main():
     print(exact_query(query))
     end_time = time.time()
     print("Execution time: ", end_time - start_time, "seconds")
+    #start_time = time.time()
+    #print(exact_query_pandas(query))
+    #end_time = time.time()
+    #print("Execution time: ", end_time - start_time, "seconds")
+
     
 if __name__ == '__main__':
     main()

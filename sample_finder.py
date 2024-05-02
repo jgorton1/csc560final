@@ -8,6 +8,8 @@ from Partition import *
 def sample_finder(filename, where_cols, output_cols, where_predicates):
     # read the pickle file
     part_collection = PartitionCollection.deserialize(filename)
+    for part in part_collection.partitions:
+        print(part.parts)
     # find the partitions that can be used for the query
     # if the partition has the where columns and the output columns, then it can be used
     # what if the where columns/predicates are not in the same order as the partition columns?
@@ -35,11 +37,15 @@ def set_equal(list1, list2):
     return set(list1) == set(list2)
 def main():
     filename = "partitions.pkl"
-    where_cols = ['l_returnflag','l_extendedprice']
+    '''where_cols = ['l_returnflag','l_extendedprice']
     where_cols.reverse()
     output_cols = ['l_tax']
+
     where_predicates = ['R', [0,20000]] # TODO add support for multiple predicates
-    where_predicates.reverse()
+    where_predicates.reverse()'''
+    where_cols = ['l_returnflag','l_shipmode']
+    where_predicates = ['R', 'AIR']
+    output_cols = ['l_extendedprice']
     sample_file_names = sample_finder(filename, where_cols, output_cols, where_predicates)
     print(sample_file_names)
 

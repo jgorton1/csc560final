@@ -70,7 +70,7 @@ class PartitionCollection:
         if os.path.exists(file_path):
             with open(file_path, 'rb') as file:
                 partitions = pickle.load(file)
-            partitions.extend(self.partitions)
+            self.partitions.extend(partitions)
         with open(file_path, 'wb') as file:
             pickle.dump(self.partitions, file)
     

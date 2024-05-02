@@ -21,7 +21,7 @@ def enumerate_partitions(columns, n):
         return partitions
 
 
-def sample_gen(column_set, output_set, table, error_rate=0.03, partition_size=10):
+def sample_gen(column_set, output_set, table, error_rate=0.01, partition_size=10):
     # column_set is a set of column names
     # table is name of parquet file to be read
     # error_rate is the maximum error rate as a percentage of the sample mean (sum and average will be accurate - count will be approximate)
@@ -62,9 +62,6 @@ def sample_gen(column_set, output_set, table, error_rate=0.03, partition_size=10
         with pa.OSFile("samples/" + part.name() + ".parquet", 'wb') as sink:
             with pa.parquet.ParquetWriter(sink, sample_pq.schema, compression='snappy', flavor='spark') as writer:
                 writer.write_table(sample_pq)
-        # store this in a logfile so we don't recreate samples unnecessarily
-        with open("logfile.txt", "a") as logfile:
-            logfile.write(part.name() + "\n")
     # save the partition collection
     part_coll.serialize("partitions.pkl")
 
@@ -105,6 +102,10 @@ def main():
     table = 'db_parq/lineitem.parquet'
     column_set = ["l_returnflag", "l_extendedprice"]
     output_set = ["l_tax"]
+
+    '''table = 'db_parq/lineitem.parquet'
+    column_set = ["l_returnflag", "l_shipmode"]
+    output_set = ["l_extendedprice"]'''
     sample_gen(column_set, output_set, table)
 if __name__ == "__main__":
     main()
